@@ -1,0 +1,8 @@
+{
+  "name": "textforge-ai",
+  "version": "1.0.0",
+  "description": "AI Text Refiner with OpenRouter.ai",
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}

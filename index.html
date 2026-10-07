@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TextCraft - Reformulation intelligente anti-plagiat pour étudiants PFE.">
+    <title>TextCraft AI - Anti-Plagiat Intelligent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #0f0f1a 50%, #0a0a0f 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(18, 18, 27, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 32px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .gradient-accent { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); }
+        .gradient-text { background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .magic-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+        }
+        .magic-btn:hover { transform: scale(1.05); }
+        .magic-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .style-chip {
+            transition: all 0.3s;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .style-chip.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-color: transparent;
+            color: white;
+        }
+        
+        .editor-area, .result-area {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #e5e7eb;
+            font-size: 15px;
+            line-height: 1.7;
+        }
+        .editor-area:focus {
+            border-color: #8b5cf6;
+            outline: none;
+        }
+        
+        .similarity-meter { height: 6px; border-radius: 3px; transition: width 0.5s ease; }
+        .word-badge { background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.25); color: #a78bfa; }
+        .correction-badge { background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; color: #6ee7b7; }
+        
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(139, 92, 246, 0.2);
+            border-radius: 50%;
+            border-top-color: #8b5cf6;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .result-card { animation: fadeInUp 0.5s ease-out; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .stat-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; }
+        .tip-card { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)); border-left: 4px solid #8b5cf6; }
+        
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        .float-animation { animation: float 3s ease-in-out infinite; }
+        
+        .lang-badge { background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.3); }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="relative z-10">
+        <nav class="px-6 py-4 border-b border-white/5 bg-black/30 backdrop-blur-sm sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto flex justify-between items-center flex-wrap gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 gradient-accent rounded-xl flex items-center justify-center shadow-xl float-animation">
+                        <i class="fas fa-robot text-white text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white tracking-tight">TextCraft<span class="gradient-text">AI</span></h1>
+                        <p class="text-xs text-gray-400">Reformulation IA - Anti-Plagiat</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+                        <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                        <span class="text-gray-300 text-sm font-medium">IA Active (Groq)</span>
+                    </div>
+                    <div class="lang-badge flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+                        <i class="fas fa-language text-purple-400 text-sm"></i>
+                        <span class="text-gray-300 text-sm font-medium" id="langIndicator">🇫🇷 Français</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto px-6 py-12">
+            <div class="text-center mb-12">
+                <div class="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm px-5 py-2.5 rounded-full border border-white/15 mb-6">
+                    <i class="fas fa-bolt text-yellow-400 text-sm"></i>
+                    <span class="text-gray-300 text-sm font-medium">IA Ultra-Rapide - Modèle Llama 3.1</span>
+                </div>
+                <h2 class="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+                    Reformulation par<br>
+                    <span class="gradient-text">Intelligence Artificielle</span>
+                </h2>
+                <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+                    Anti-plagiat intelligent - Respecte la terminologie académique - Français & Anglais
+                </p>
+                
+                <div class="flex justify-center gap-6 mt-8 flex-wrap">
+                    <div class="stat-card px-6 py-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-tachometer-alt text-green-400"></i>
+                            <span class="text-white font-bold">Ultra-rapide</span>
+                            <span class="text-gray-400 text-sm">~1-2 secondes</span>
+                        </div>
+                    </div>
+                    <div class="stat-card px-6 py-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-language text-blue-400"></i>
+                            <span class="text-white font-bold">Multilingue</span>
+                            <span class="text-gray-400 text-sm">FR/EN</span>
+                        </div>
+                    </div>
+                    <div class="stat-card px-6 py-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-shield-alt text-purple-400"></i>
+                            <span class="text-white font-bold">Anti-Plagiat</span>
+                            <span class="text-gray-400 text-sm">Avancé</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center mb-10">
+                <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-2 inline-flex flex-wrap justify-center gap-2 border border-white/15">
+                    <button onclick="selectStyle('academic')" class="style-chip px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 text-gray-300 active" data-style="academic">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span>Académique PFE</span>
+                    </button>
+                    <button onclick="selectStyle('simple')" class="style-chip px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 text-gray-300" data-style="simple">
+                        <i class="fas fa-paragraph"></i>
+                        <span>Clair & Synthétique</span>
+                    </button>
+                    <button onclick="selectStyle('technical')" class="style-chip px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 text-gray-300" data-style="technical">
+                        <i class="fas fa-microchip"></i>
+                        <span>Technique (STEM)</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="glass-card overflow-hidden">
+                    <div class="px-6 py-4 border-b border-white/10 bg-white/5">
+                        <div class="flex justify-between items-center flex-wrap gap-2">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-quote-right text-purple-400 text-lg"></i>
+                                <h3 class="font-semibold text-white text-lg">Source à reformuler</h3>
+                            </div>
+                            <div class="flex gap-2">
+                                <div class="word-badge px-3 py-1.5 rounded-full text-xs flex items-center gap-2">
+                                    <i class="fas fa-chart-simple"></i>
+                                    <span id="originalWordCount">0</span> mots
+                                </div>
+                                <div id="riskBadge" class="px-3 py-1.5 rounded-full text-xs flex items-center gap-2 bg-red-500/20 text-red-300">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Risque élevé</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <textarea id="originalText" rows="14" class="editor-area w-full p-5 rounded-xl resize-none focus:outline-none" placeholder="📝 Collez votre texte ici (Français ou English)..."></textarea>
+                        <div class="mt-4 flex justify-between items-center text-xs text-gray-500">
+                            <div class="flex items-center space-x-4">
+                                <span class="flex items-center gap-1"><i class="fas fa-bolt"></i> Ultra-rapide</span>
+                                <span class="flex items-center gap-1"><i class="fas fa-globe"></i> Multilingue</span>
+                            </div>
+                            <button onclick="clearText()" class="text-gray-500 hover:text-gray-300 transition-all">
+                                <i class="fas fa-eraser"></i> Effacer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card overflow-hidden">
+                    <div class="px-6 py-4 border-b border-white/10 bg-white/5">
+                        <div class="flex justify-between items-center flex-wrap gap-2">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-magic text-green-400 text-lg"></i>
+                                <h3 class="font-semibold text-white text-lg">Texte reformulé par IA</h3>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="copyResult()" class="px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 text-gray-400 hover:text-white transition-all bg-white/10">
+                                    <i class="far fa-copy"></i> Copier
+                                </button>
+                                <button onclick="compareTexts()" class="px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 text-gray-400 hover:text-white transition-all bg-white/10">
+                                    <i class="fas fa-chart-line"></i> Comparer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div id="resultArea" class="result-area min-h-[320px] max-h-[320px] overflow-y-auto p-5 rounded-xl">
+                            <div class="flex flex-col items-center justify-center h-full text-center">
+                                <div class="w-20 h-20 gradient-accent rounded-2xl flex items-center justify-center mb-5 float-animation shadow-xl">
+                                    <i class="fas fa-robot text-3xl text-white"></i>
+                                </div>
+                                <p class="text-gray-400 font-medium text-lg">IA prête à reformuler</p>
+                                <p class="text-gray-500 text-sm mt-2">Cliquez sur "Anti-Plagiat" pour reformuler</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <div class="flex justify-between items-center mb-2 text-xs">
+                                <span class="text-gray-400"><i class="fas fa-chart-simple"></i> Taux d'originalité estimé</span>
+                                <span id="similarityPercent" class="text-gray-300 font-bold">--%</span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                                <div id="similarityBar" class="similarity-meter bg-gradient-to-r from-red-500 to-green-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 flex justify-between items-center">
+                            <div id="corrections" class="flex-1"></div>
+                            <div class="word-badge px-3 py-1.5 rounded-full text-xs flex items-center gap-2 ml-4">
+                                <i class="fas fa-chart-simple"></i>
+                                <span id="resultWordCount">0</span> mots
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-8">
+                <button onclick="reformatText()" class="magic-btn px-10 py-4 rounded-2xl text-white font-bold text-lg shadow-2xl flex items-center gap-3 transition-all transform hover:scale-105">
+                    <i class="fas fa-shield-alt text-xl"></i>
+                    <span>Anti-Plagiat (IA)</span>
+                </button>
+            </div>
+
+            <div class="mt-12 grid md:grid-cols-3 gap-4">
+                <div class="tip-card p-4 rounded-xl">
+                    <i class="fas fa-bolt text-yellow-400 text-xl mb-2"></i>
+                    <h4 class="text-white font-semibold mb-1">Ultra-rapide</h4>
+                    <p class="text-gray-400 text-xs">Modèle Llama 3.1 - Réponse en ~1-2 secondes</p>
+                </div>
+                <div class="tip-card p-4 rounded-xl">
+                    <i class="fas fa-language text-purple-400 text-xl mb-2"></i>
+                    <h4 class="text-white font-semibold mb-1">100% Multilingue</h4>
+                    <p class="text-gray-400 text-xs">Détection automatique Français/Anglais</p>
+                </div>
+                <div class="tip-card p-4 rounded-xl">
+                    <i class="fas fa-graduation-cap text-green-400 text-xl mb-2"></i>
+                    <h4 class="text-white font-semibold mb-1">Académique</h4>
+                    <p class="text-gray-400 text-xs">Préserve la terminologie technique</p>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-white/10 text-center text-gray-500 text-xs">
+                <p>© 2026 TextCraft AI - Reformulation par Intelligence Artificielle</p>
+                <p class="mt-1">✨ Anti-plagiat intelligent pour vos travaux académiques ✨</p>
+            </div>
+        </main>
+
+        <div id="loadingOverlay" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden items-center justify-center">
+            <div class="bg-gradient-to-br from-[#0f0f1a] to-[#0a0a0f] rounded-2xl p-8 text-center border border-purple-500/30 shadow-2xl">
+                <div class="loader mx-auto mb-5"></div>
+                <div class="flex items-center justify-center gap-2 mb-3">
+                    <i class="fas fa-robot text-purple-400 text-2xl animate-pulse"></i>
+                    <p class="text-white font-bold text-lg">IA en pleine réflexion...</p>
+                </div>
+                <p class="text-gray-400 text-sm">Reformulation intelligente en cours</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // IMPORTANT: Pour que l'API fonctionne, vous devez:
+        // 1. Aller sur https://console.groq.com/keys
+        // 2. Créer un compte gratuit
+        // 3. Générer une clé API
+        // 4. Remplacer la clé ci-dessous par la vôtre
+        // ============================================
+        
+        // 🔑 REMPLACEZ CETTE CLÉ PAR LA VÔTRE (obtenue sur console.groq.com)
+        const GROQ_API_KEY = "";
+        const GROQ_MODEL = "llama-3.1-8b-instant";
+        
+        let currentStyle = 'academic';
+        let currentResult = '';
+        let originalTextCache = '';
+        let isProcessing = false;
+        let currentLanguage = 'fr';
+        
+        function detectLanguage(text) {
+            if (!text || text.trim() === '') return 'fr';
+            
+            const frenchPatterns = /[àâçéèêëîïôûùüÿñæœ]|\b(le|la|les|un|une|des|du|de|et|est|sont|pour|dans|avec|que|qui|dont|au|aux|ce|cet|cette|ces|je|tu|il|elle|on|nous|vous|ils|elles)\b/gi;
+            const englishPatterns = /\b(the|a|an|and|of|to|in|for|on|with|by|at|from|is|are|was|were|be|been|have|has|had|i|you|he|she|it|we|they|this|that|these|those)\b/gi;
+            
+            const frenchMatches = (text.match(frenchPatterns) || []).length;
+            const englishMatches = (text.match(englishPatterns) || []).length;
+            const frenchChars = (text.match(/[àâçéèêëîïôûùüÿñæœ]/gi) || []).length;
+            
+            if (frenchMatches + frenchChars > englishMatches * 1.2) return 'fr';
+            if (englishMatches > frenchMatches * 1.2) return 'en';
+            return 'fr';
+        }
+        
+        function selectStyle(style) {
+            currentStyle = style;
+            document.querySelectorAll('.style-chip').forEach(chip => chip.classList.remove('active'));
+            const activeChip = document.querySelector(`[data-style="${style}"]`);
+            if (activeChip) activeChip.classList.add('active');
+            
+            const styleNames = { academic: 'Académique', simple: 'Synthétique', technical: 'Technique' };
+            showNotification(`Style ${styleNames[style]} activé`, 'info');
+        }
+        
+        function updateWordCount() {
+            const textarea = document.getElementById('originalText');
+            if (textarea) {
+                const text = textarea.value || '';
+                const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+                document.getElementById('originalWordCount').innerText = wordCount;
+                
+                const riskBadge = document.getElementById('riskBadge');
+                if (wordCount > 50) {
+                    riskBadge.className = 'px-3 py-1.5 rounded-full text-xs flex items-center gap-2 bg-red-500/20 text-red-300';
+                    riskBadge.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Risque élevé</span>';
+                } else if (wordCount > 20) {
+                    riskBadge.className = 'px-3 py-1.5 rounded-full text-xs flex items-center gap-2 bg-yellow-500/20 text-yellow-300';
+                    riskBadge.innerHTML = '<i class="fas fa-chart-line"></i><span>Risque modéré</span>';
+                } else if (wordCount > 0) {
+                    riskBadge.className = 'px-3 py-1.5 rounded-full text-xs flex items-center gap-2 bg-green-500/20 text-green-300';
+                    riskBadge.innerHTML = '<i class="fas fa-check-circle"></i><span>Risque faible</span>';
+                }
+                
+                if (text.length > 20) {
+                    const detectedLang = detectLanguage(text);
+                    if (detectedLang !== currentLanguage) {
+                        currentLanguage = detectedLang;
+                        document.getElementById('langIndicator').innerHTML = detectedLang === 'fr' ? '🇫🇷 Français' : '🇬🇧 English';
+                    }
+                }
+            }
+        }
+        
+        function init() {
+            const textarea = document.getElementById('originalText');
+            if (textarea) textarea.addEventListener('input', updateWordCount);
+            selectStyle('academic');
+            updateWordCount();
+            showNotification('🤖 IA prête - Reformulation anti-plagiat', 'success');
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+        
+        function clearText() {
+            const textarea = document.getElementById('originalText');
+            if (textarea) {
+                textarea.value = '';
+                updateWordCount();
+                showNotification('Texte effacé', 'info');
+                textarea.focus();
+            }
+        }
+        
+        async function reformatText() {
+            if (isProcessing) {
+                showNotification('Traitement en cours...', 'info');
+                return;
+            }
+            
+            const textarea = document.getElementById('originalText');
+            const originalText = textarea?.value;
+            
+            if (!originalText || originalText.trim() === '') {
+                showNotification('Veuillez entrer un texte à reformuler', 'error');
+                textarea?.focus();
+                return;
+            }
+            
+            // Vérifier si la clé API a été configurée
+            if (!GROQ_API_KEY) {
+                showNotification('⚠️ Configuration requise: Veuillez configurer la clé API dans le code', 'error');
+                return;
+            }
+            
+            originalTextCache = originalText;
+            isProcessing = true;
+            showLoading();
+            
+            const detectedLang = detectLanguage(originalText);
+            currentLanguage = detectedLang;
+            document.getElementById('langIndicator').innerHTML = detectedLang === 'fr' ? '🇫🇷 Français' : '🇬🇧 English';
+            
+            try {
+                const stylePrompts = {
+                    academic: detectedLang === 'fr' ? 
+                        'un style académique formel pour PFE/mémoire, en préservant la rigueur scientifique' :
+                        'a formal academic style for PFE/thesis, preserving scientific rigor',
+                    simple: detectedLang === 'fr' ?
+                        'un style clair et accessible tout en conservant l\'exactitude des informations' :
+                        'a clear and accessible style while preserving information accuracy',
+                    technical: detectedLang === 'fr' ?
+                        'un style technique précis adapté aux domaines STEM, en préservant TOUS les termes techniques' :
+                        'a precise technical style adapted to STEM fields, preserving ALL technical terms'
+                };
+                
+                const systemPrompt = detectedLang === 'fr' ?
+                    `Tu es un assistant académique spécialisé dans l'anti-plagiat. Reformule le texte avec ${stylePrompts[currentStyle]}.
+Règles: préserve les termes techniques, garde le sens exact, change la structure des phrases.
+Texte: "${originalText}"` :
+                    `You are an academic anti-plagiarism assistant. Rephrase the text with ${stylePrompts[currentStyle]}.
+Rules: preserve technical terms, keep exact meaning, change sentence structure.
+Text: "${originalText}"`;
+                
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${GROQ_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: GROQ_MODEL,
+                        messages: [
+                            { role: 'system', content: detectedLang === 'fr' ? 'Expert en reformulation académique.' : 'Expert in academic rephrasing.' },
+                            { role: 'user', content: systemPrompt }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 2000
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || `Erreur ${response.status}`);
+                }
+                
+                const data = await response.json();
+                currentResult = data.choices[0].message.content.trim().replace(/^["']|["']$/g, '');
+                
+                const similarity = calculateSimilarity(originalText, currentResult);
+                updateSimilarityMeter(similarity);
+                
+                const corrections = getAcademicCorrections(currentResult, detectedLang);
+                displayResult(currentResult, corrections, detectedLang);
+                showNotification(`✅ Texte reformulé - Originalité: ${Math.round(100 - similarity)}%`, 'success');
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+                showNotification('Erreur API: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+                isProcessing = false;
+            }
+        }
+        
+        function calculateSimilarity(original, modified) {
+            const wordsOrig = new Set(original.toLowerCase().split(/\s+/));
+            const wordsMod = new Set(modified.toLowerCase().split(/\s+/));
+            let common = 0;
+            for (let word of wordsOrig) {
+                if (wordsMod.has(word)) common++;
+            }
+            const total = Math.max(wordsOrig.size, wordsMod.size);
+            return total > 0 ? (common / total) * 100 : 0;
+        }
+        
+        function updateSimilarityMeter(similarity) {
+            const originality = 100 - similarity;
+            const bar = document.getElementById('similarityBar');
+            const percentSpan = document.getElementById('similarityPercent');
+            
+            if (bar && percentSpan) {
+                bar.style.width = `${originality}%`;
+                bar.className = 'similarity-meter ' + 
+                    (originality > 70 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+                     originality > 40 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
+                     'bg-gradient-to-r from-red-500 to-rose-500');
+                percentSpan.innerText = `${Math.round(originality)}%`;
+            }
+        }
+        
+        function getAcademicCorrections(text, lang) {
+            const corrections = [];
+            const styleNames = { academic: lang === 'fr' ? 'Académique' : 'Academic', 
+                                simple: lang === 'fr' ? 'Synthétique' : 'Concise', 
+                                technical: lang === 'fr' ? 'Technique' : 'Technical' };
+            corrections.push(lang === 'fr' ? `🤖 IA - Style ${styleNames[currentStyle]}` : `🤖 AI - ${styleNames[currentStyle]} style`);
+            corrections.push(lang === 'fr' ? `📊 Reformulation intelligente` : `📊 Intelligent rephrasing`);
+            corrections.push(lang === 'fr' ? `🛡️ Anti-plagiat actif` : `🛡️ Anti-plagiarism active`);
+            return corrections;
+        }
+        
+        function displayResult(text, corrections, lang) {
+            const resultArea = document.getElementById('resultArea');
+            if (!resultArea) return;
+            
+            const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+            document.getElementById('resultWordCount').innerText = wordCount;
+            
+            resultArea.innerHTML = `
+                <div class="result-card">
+                    <div class="prose max-w-none text-gray-300 leading-relaxed">
+                        ${text.split('\n').map(para => `<p class="mb-3">${escapeHtml(para)}</p>`).join('')}
+                    </div>
+                </div>
+            `;
+            
+            const correctionsDiv = document.getElementById('corrections');
+            if (correctionsDiv && corrections.length > 0) {
+                correctionsDiv.innerHTML = `
+                    <div class="text-xs">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fas fa-check-circle text-green-400"></i>
+                            <span class="font-medium text-gray-300">${lang === 'fr' ? 'Améliorations :' : 'Improvements:'}</span>
+                        </div>
+                        ${corrections.map(c => `
+                            <div class="correction-badge px-3 py-1.5 rounded-lg text-xs mb-1 flex items-center gap-2">
+                                <i class="fas fa-bolt text-yellow-400"></i>
+                                ${escapeHtml(c)}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
+        
+        function compareTexts() {
+            if (!originalTextCache || !currentResult) {
+                showNotification('Comparez après avoir reformulé un texte', 'info');
+                return;
+            }
+            
+            const similarity = calculateSimilarity(originalTextCache, currentResult);
+            const originality = 100 - similarity;
+            const lang = currentLanguage;
+            
+            let qualityMsg = originality > 70 ? (lang === 'fr' ? 'Excellent!' : 'Excellent!') : 
+                           originality > 40 ? (lang === 'fr' ? 'À améliorer' : 'Needs improvement') : 
+                           (lang === 'fr' ? 'Risque élevé' : 'High risk');
+            
+            showNotification(`📊 Originalité: ${Math.round(originality)}% - ${qualityMsg}`, 
+                originality > 70 ? 'success' : originality > 40 ? 'info' : 'error');
+        }
+        
+        async function copyResult() {
+            if (!currentResult) {
+                showNotification('Aucun texte à copier', 'error');
+                return;
+            }
+            try {
+                await navigator.clipboard.writeText(currentResult);
+                showNotification('📋 Texte copié !', 'success');
+            } catch (err) {
+                showNotification('Erreur de copie', 'error');
+            }
+        }
+        
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed bottom-4 right-4 z-50 px-5 py-3 rounded-xl shadow-2xl transform transition-all duration-500 translate-x-full`;
+            const colors = { 
+                success: 'bg-gradient-to-r from-green-500 to-emerald-600', 
+                error: 'bg-gradient-to-r from-red-500 to-rose-600', 
+                info: 'bg-gradient-to-r from-blue-500 to-purple-600' 
+            };
+            notification.className += ` ${colors[type]} text-white`;
+            notification.innerHTML = `<div class="flex items-center gap-2"><i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i><span class="font-medium text-sm">${message}</span></div>`;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.style.transform = 'translateX(0)', 10);
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => notification.remove(), 500);
+            }, 3500);
+        }
+        
+        function showLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+            }
+        }
+        
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
